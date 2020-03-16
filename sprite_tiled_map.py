@@ -5,6 +5,8 @@ import time
 
 TILE_SCALING = 0.5
 PLAYER_SCALING = 1
+PLAYER_START_X = 196
+PLAYER_START_Y = 200
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -40,51 +42,110 @@ class PlayerCharacter(arcade.Sprite):
     def __init__(self):
         super().__init__()
 
+        file_path = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(file_path)
+
+        #* устанавливаем куда смотрит лицо по-умолчанию
         self.character_face_direction = RIGHT_FACING
 
+        #* Переключение между последовательностями изображений
         self.cur_texture = 0
+        self.scale = CHARACTER_SCALING
+
+        #* Отслеживание наших состояний
         self.jumping = False
         self.climbing = False
         self.is_on_ladder = False
-        self.scale = CHARACTER_SCALING
+        # self.is_death = False
 
-        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+#!        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
 
+#*   ===Загрузка текстур===
+
+        #* Указываем папку содержащую все изображения
         main_path = "sprites/player/adventurer"
 
-        self.idle_textures = []
+        #* Загрузка текстур стояния для левого и правого состояния
+        self.idle_texture_pair = []
         for i in range(4):
             texture = load_texture_pair(f"{main_path}-idle-{i}.png")
-            self.idle_textures.append(texture)
+            self.idle_texture_pair.append(texture)
 
-        self.run_textures = []
+        #* Загрузка текстур бега для левого и правого состояния
+        self.run_texture_pair = []
         for i in range(6):
             texture = load_texture_pair(f"{main_path}-run-{i}.png")
-            self.run_textures.append(texture)
+            self.run_texture_pair.append(texture)
 
-        self.jump_textures = []
+        #* Загрузка текстур прыжка для левого и правого состояния
+        self.jump_texture_pair = []
         for i in range(4):
             texture = load_texture_pair(f"{main_path}-jump-{i}.png")
-            self.jump_textures.append(texture)
-        
-        self.cast_textures = []
+            self.jump_texture_pair.append(texture)
+
+        #* Загрузка текстур каста заклинания для левого и правого состояния
+        self.cast_texture_pair = []
         for i in range(4):
             texture = load_texture_pair(f"{main_path}-cast-{i}.png")
-            self.cast_textures.append(texture)
-        
-        self.attack_textures = []
+            self.cast_texture_pair.append(texture)
+
+        #* Загрузка текстур атаки мечём для левого и правого состояния
+        self.attack_texture_pair = []
         for i in range(5):
             texture = load_texture_pair(f"{main_path}-swordAttack-{i}.png")
-            self.attack_textures.append(texture)
+            self.attack_texture_pair.append(texture)
 
-        self.die_textures = []
+        #* Загрузка текстур смерти персонажа для левого и правого состояния
+        self.die_texture_pair = []
         for i in range(7):
             texture = load_texture_pair(f"{main_path}-die-{i}.png")
-            self.die_textures.append(texture)
+            self.die_texture_pair.append(texture)
+
+        #* Инициализируем начальную текстуру
+        self.texture = self.idle_texture_pair[0]
+
+        #? Что такое хит-боксы я пока не разобрался, но вроде нужно
+        self.set_hit_box(self.texture.hit_box_points)
+
 
     def update_animation(self, delta_time=1 /60):
 
-        #* анимация стояния
+        #* анимация простоя
+        if self.change_x == 0:
+            self.texture = self.idle_texture_pair[self.character_face_direction]
+            return
+
+        #* анимация бега
+        self.cur_texture += 1
+        if self.cur_texture > 5:
+            self.cur_texture = 0
+        self.texture = self.run_texture_pair[self.set_texture][self.character_face_direction]
+
+        #* анимация прыжка
+        self.cur_texture +=1
+        if self.cur_texture >3:
+            self.cur_texture = 0
+        self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
+
+        #* анимация каста заклинания
+        self.cur_texture += 1
+        if self.cur_texture > 3:
+            self.cur_texture = 0
+        self.texture = self.cast_texture_pair[self.cur_texture][self.character_face_direction]
+
+        #* анимация атаки мечём
+        self.cur_texture +=1
+        if self.cur_texture > 4:
+            self.cur_texture = 0
+        self.texture = self.attack_texture_pair[self.cur_texture][self.character_face_direction]
+
+        #* анимация смерти
+        self.cur_texture += 1
+        if self.cur_texture > 6:
+            self.cur_texture = 0
+        self.texture = self.die_texture_pair[self.cur_texture][self.character_face_direction]
+
+"""        #* анимация стояния
         self.cur_texture += 1
         if self.cur_texture > 3 * UPDATES_PER_FRAME:
             self.cur_texture = 0
@@ -119,7 +180,7 @@ class PlayerCharacter(arcade.Sprite):
         if self.cur_texture > 6 * UPDATES_PER_FRAME:
             self.cur_texture = 0
         self.texture = self.die_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
+"""
 
 
 class MyGame(arcade.Window):
@@ -138,96 +199,138 @@ class MyGame(arcade.Window):
         file_path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(file_path)
 
-        # Sprite lists
+        #* отслеживаем текущее состояние нажатой клавиши
+        self.left_pressed = False
+        self.right_pressed = False
+        self.up_pressed = False
+        self.down_pressed = False
+        self.jump_need_reset = False
+
+        #* Это списки которые отслеживают наши спрайты. Каждый спрайт должен войти в список.
+        #TODO: self.coin_list = None
         self.wall_list = None
+        #? self.background_list = None
+        #TODO: self.ladder_list = None
         self.player_list = None
-        self.coin_list = None
-
-        # Set up the player
-        self.score = 0
-        self.player = None
-
-        self.physics_engine = None
-        self.view_left = 0
-        self.view_bottom = 0
-        self.end_of_map = 0
-        self.game_over = False
-        self.last_time = None
-        self.frame_count = 0
-        self.fps_message = None
         self.background = None
 
-    def setup(self):
-        """ Set up the game and initialize the variables. """
+        #* Отдельная переменная которая содержит спрайт игрока
+        self.player_sprite = None
 
+        #* Инициализируем физический движок
+        self.physics_engine = None
+
+        #* Используем для отслеживания нашего скролинга
+        self.view_bottom = 0
+        self.view_left = 0
+        #TODO: self.view_right = 0
+        #TODO: self.view_top = 0
+
+        #* Настраиваем конец карты
+        self.end_of_map = 0
+
+        #* Отслеживание очков
+        self.score = 0
+
+        #* Ещё несколько параметров для реализации
+        #TODO: self.game_over = False
+        #TODO: self.last_time = None
+        #TODO: self.frame_count = 0
+        #TODO: self.fps_message = None
+
+        #* Загрузка свуковых эффектов
+        #TODO: self.collect_coin_sound = arcade.load_sound("указываем расположение файла")
+        #TODO: self.jump_sound = arcade.load_sound("указываем расположение файла")
+        #TODO: self.game_over = arcade.load_sound("указываем расположение файла")
+
+
+    def setup(self):
+        """ Настройка игры и инициализация переменных. """
+
+        #* Устанавливаем задний фон для нашей карты
         self.background = arcade.load_texture("sprites/background.png")
 
-        # Sprite lists
-        self.player_list = arcade.SpriteList()
-        self.coin_list = arcade.SpriteList()
+        #? Нужно ли опять писать это тут когда написано выше? Но делаю по примеру.
+        self.view_bottom = 0
+        self.view_left = 0
+        #TODO: self. view_score = 0
 
-        self.player = PlayerCharacter()
+        #* Создаём спрайт листы
+        self.player_sprite = arcade.SpriteList()
+        #TODO: self.coin_list = arcade.SpriteList()
 
-        self.player.center_x = 196
-        self.player.center_y = 270
-        self.player.scale = 1
+        #* Ссылаемся что список игрока равен классу что мы уже описали
+        self.player_sprite = PlayerCharacter()
 
-        self.player_list.append(self.player)
+        #* Задаём начальные координаты старта персонажа, его размеры.
+        self.player_sprite.center_x = PLAYER_START_X
+        self.player_sprite.center_y = PLAYER_START_Y
+        self.player_sprite.scale = PLAYER_SCALING
+        self.player_list.append(self.player_sprite)
 
-        # Set up the player
-        # self.player_sprite = arcade.Sprite(":resources:images/animated_characters/female_person/femalePerson_idle.png",
-        #                                    PLAYER_SCALING)
-
-        # Starting position of the player
-        # self.player_sprite.center_x = 196
-        # self.player_sprite.center_y = 270
-        # self.player_list.append(self.player_sprite)
-
-        # map_name = ":resources:/tmx_maps/map.tmx"
+        #* Задаём какую карту загружать и где она расположена
         map_name = "test4.tmx"
 
-
-        # Read in the tiled map
+        #* Читаем тайловую карту
         my_map = arcade.tilemap.read_tmx(map_name)
         self.end_of_map = my_map.map_size.width * GRID_PIXEL_SIZE
 
-        # --- Platforms ---
+        #* Вычисляем правый конец карты в пикселях
+        self.end_of_map = my_map.map_size.width * GRID_PIXEL_SIZE
+
+        #* --- Слой земли ---
         self.wall_list = arcade.tilemap.process_layer(my_map, 'ground', 1)
 
-        # --- Coins ---
-        # self.coin_list = arcade.tilemap.process_layer(my_map, 'Coins', TILE_SCALING)
+        #* --- Слой монеток (пока не реализовано) ---
+        #TODO: self.coin_list = arcade.tilemap.process_layer(my_map, coin_layer_name, TILE_SCALING)
 
+        #* Движущиеся платформы
+        #TODO: moving_platforms_list = arcade.tilemap.process_layer(my_map, moving_platforms_layer, TILE_SCALING)
+        #TODO: for sprite in moving_platforms_list:
+        #TODO:    self.wall_list.append(sprite)
+
+        #* Объекты заднего фона
+        #TODO: self.background_list = arcade.tilemap.process_layer(my_map, "Background", TILE_SCALING)
+
+        #* Лестницы
+        #TODO: self.ladder_list = arcade.tilemap.process_layer(my_map, "Ladders", TILE_SCALING)
+
+        
         # --- Other stuff
         # Set the background color
         # if my_map.background_color:
         #     arcade.set_background_color(my_map.background_color)
 
-        # Keep player from running through the wall_list layer
-        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player,
+        #* Создаём физический движок
+        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
                                                              self.wall_list,
-                                                             gravity_constant=GRAVITY)
+                                                             gravity_constant=GRAVITY)   #TODO: ещё нужно будет добавить ladder=self.ladder_list
 
-        # Set the view port boundaries
-        # These numbers set where we have 'scrolled' to.
-        self.view_left = 0
-        self.view_bottom = 0
-
-        self.game_over = False
 
     def on_draw(self):
         """
         Render the screen.
         """
-        # scale = SCREEN_WIDTH / self.background.width
-        # arcade.draw_lrwh_rectangle_textured(0, 0,
-        #                                     SCREEN_WIDTH, SCREEN_HEIGHT,
-        #                                     self.background)
+        arcade.start_render()
+
+        #* Рисуем наши спрайты.
+        self.wall_list.draw()
+        self.background.draw()
+        #TODO: self.background_list.draw()
+        #TODO: self.ladder_list.draw()
+        #TODO: self.coin_list.draw()
+        self.player_list.draw()
 
 
-        self.frame_count += 1
+
+
+
+
+
+        #self.frame_count += 1
 
         # This command has to happen before we start drawing
-        arcade.start_render()
+        
 
         scale = SCREEN_WIDTH / self.background.width
         arcade.draw_lrwh_rectangle_textured(0, 0,
