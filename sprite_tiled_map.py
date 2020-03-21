@@ -5,14 +5,10 @@ import time
 
 TILE_SCALING = 0.5
 PLAYER_SCALING = 1
-PLAYER_START_X = 196
-PLAYER_START_Y = 200
-PLAYER_MOVEMENT_SPEED = 7
-PLAYER_JUMP_SPEED = 30
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-SCREEN_TITLE = "17-th Update"
+SCREEN_TITLE = "Sprite Tiled Map Example"
 SPRITE_PIXEL_SIZE = 128
 GRID_PIXEL_SIZE = (SPRITE_PIXEL_SIZE * TILE_SCALING)
 
@@ -27,7 +23,7 @@ VIEWPORT_LEFT_MARGIN = 270
 MOVEMENT_SPEED = 5
 JUMP_SPEED = 23
 GRAVITY = 1.1
-UPDATES_PER_FRAME = 7
+UPDATES_PER_FRAME = 3
 CHARACTER_SCALING = 1
 
 RIGHT_FACING = 0
@@ -44,157 +40,105 @@ class PlayerCharacter(arcade.Sprite):
     def __init__(self):
         super().__init__()
 
-        file_path = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(file_path)
-
-        #* устанавливаем куда смотрит лицо по-умолчанию
         self.character_face_direction = RIGHT_FACING
 
-        #* Переключение между последовательностями изображений
         self.cur_texture = 0
-        self.scale = CHARACTER_SCALING
-
-        #* Отслеживание наших состояний
         self.jumping = False
         self.climbing = False
         self.is_on_ladder = False
-        # self.is_death = False
+        self.scale = CHARACTER_SCALING
 
-#!        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+        # self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
 
-#*   ===Загрузка текстур===
-
-        #* Указываем папку содержащую все изображения
         main_path = "sprites/player/adventurer"
 
-        #* Загрузка текстур стояния для левого и правого состояния
-        self.idle_texture_pair = []
-        for i in range(4):
+        self.idle_texture = load_texture_pair(f"{main_path}-idle-0.png")
+        self.idle_textures = []
+        for i in range(16):
             texture = load_texture_pair(f"{main_path}-idle-{i}.png")
-            self.idle_texture_pair.append(texture)
+            self.idle_textures.append(texture)
 
-        #* Загрузка текстур бега для левого и правого состояния
-        self.run_texture_pair = []
+        self.run_textures = []
         for i in range(6):
             texture = load_texture_pair(f"{main_path}-run-{i}.png")
-            self.run_texture_pair.append(texture)
+            self.run_textures.append(texture)
 
-        #* Загрузка текстур прыжка для левого и правого состояния
-        self.jump_texture_pair = []
-        for i in range(4):
-            texture = load_texture_pair(f"{main_path}-jump-{i}.png")
-            self.jump_texture_pair.append(texture)
+        # self.jump_textures = []
+        # for i in range(4):
+        #     texture = load_texture_pair(f"{main_path}-jump-{i}.png")
+        #     self.jump_textures.append(texture)
+        
+        # self.cast_textures = []
+        # for i in range(4):
+        #     texture = load_texture_pair(f"{main_path}-cast-{i}.png")
+        #     self.cast_textures.append(texture)
+        
+        # self.attack_textures = []
+        # for i in range(5):
+        #     texture = load_texture_pair(f"{main_path}-swordAttack-{i}.png")
+        #     self.attack_textures.append(texture)
 
-        #* Загрузка текстур каста заклинания для левого и правого состояния
-        self.cast_texture_pair = []
-        for i in range(4):
-            texture = load_texture_pair(f"{main_path}-cast-{i}.png")
-            self.cast_texture_pair.append(texture)
+        # self.die_textures = []
+        # for i in range(7):
+        #     texture = load_texture_pair(f"{main_path}-die-{i}.png")
+        #     self.die_textures.append(texture)
+        
+        self.texture = self.idle_texture[0]
 
-        #* Загрузка текстур атаки мечём для левого и правого состояния
-        self.attack_texture_pair = []
-        for i in range(5):
-            texture = load_texture_pair(f"{main_path}-swordAttack-{i}.png")
-            self.attack_texture_pair.append(texture)
-
-        #* Загрузка текстур смерти персонажа для левого и правого состояния
-        self.die_texture_pair = []
-        for i in range(7):
-            texture = load_texture_pair(f"{main_path}-die-{i}.png")
-            self.die_texture_pair.append(texture)
-
-        #* Инициализируем начальную текстуру
-        self.texture = self.idle_texture_pair[0][0]
-
-        #? Что такое хит-боксы я пока не разобрался, но вроде нужно
-        self.set_hit_box(self.texture.hit_box_points)
-
-
-    def update_animation(self, delta_time=1 /60):
-
-
-#! ПРОБЛЕМА НАЧИНАЕТСЯ ЗДЕСЬ. НЕ ЗНАЮ КАК СОВМЕСТИТЬ КОД ДЛЯ СТАТИЧНОГО ПЕРСОНАЖА И АНИМИРОВАННОГО.
-
-        # #* анимация простоя(предыдущий вариант)
-        # if self.change_x == 0:
-        #     self.texture = self.idle_texture_pair[self.character_face_direction]
-        #     return
-
-        #* анимация простоя
+    def update_animation(self, delta_time):
+        # pass
         if self.change_x == 0:
             self.cur_texture += 1
-            if self.cur_texture >3:
+            if self.cur_texture > 14:
                 self.cur_texture = 0
-            self.texture = self.idle_texture_pair[self.character_face_direction]
-            return
+            
+            self.texture = self.idle_textures[self.cur_texture][self.character_face_direction]
 
+        
+        # if self.change_x < 0 and self.character_face_direction == RIGHT_FACING:
+        #     self.character_face_direction = LEFT_FACING
+        # elif self.change_x > 0 and self.character_face_direction == LEFT_FACING:
+        #     self.character_face_direction = RIGHT_FACING
 
-        #* анимация бега
-        self.cur_texture += 1
-        if self.cur_texture > 5:
-            self.cur_texture = 0
-        self.texture = self.run_texture_pair[self.set_texture][self.character_face_direction]
-
-        #* анимация прыжка
-        self.cur_texture += 1
-        if self.cur_texture > 3:
-            self.cur_texture = 0
-        self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
-
-        #* анимация каста заклинания
-        self.cur_texture += 1
-        if self.cur_texture > 3:
-            self.cur_texture = 0
-        self.texture = self.cast_texture_pair[self.cur_texture][self.character_face_direction]
-
-        #* анимация атаки мечём
-        self.cur_texture +=1
-        if self.cur_texture > 4:
-            self.cur_texture = 0
-        self.texture = self.attack_texture_pair[self.cur_texture][self.character_face_direction]
-
-        #* анимация смерти
-        self.cur_texture += 1
-        if self.cur_texture > 6:
-            self.cur_texture = 0
-        self.texture = self.die_texture_pair[self.cur_texture][self.character_face_direction]
-
-"""        #* анимация стояния
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.idle_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+        # if self.change_y > 0:
+        #     self.texture = self.jump_textures[]
+        #     return
+        # #* анимация стояния
+        # self.cur_texture += 1
+        # if self.cur_texture > 3 * UPDATES_PER_FRAME:
+        #     self.cur_texture = 0
+        # self.texture = self.idle_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
         #* анимация бега
-        self.cur_texture += 1
-        if self.cur_texture > 5 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.run_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+        # self.cur_texture += 1
+        # if self.cur_texture > 5:
+        #     self.cur_texture = 0
+        # self.texture = self.run_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
-        #* анимация прыжка
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.jump_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+        # #* анимация прыжка
+        # self.cur_texture += 1
+        # if self.cur_texture > 3 * UPDATES_PER_FRAME:
+        #     self.cur_texture = 0
+        # self.texture = self.jump_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
-        #* анимация каста
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.cast_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+        # #* анимация каста
+        # self.cur_texture += 1
+        # if self.cur_texture > 3 * UPDATES_PER_FRAME:
+        #     self.cur_texture = 0
+        # self.texture = self.cast_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
-        #* анимация атаки
-        self.cur_texture += 1
-        if self.cur_texture > 4 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.attack_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+        # #* анимация атаки
+        # self.cur_texture += 1
+        # if self.cur_texture > 4 * UPDATES_PER_FRAME:
+        #     self.cur_texture = 0
+        # self.texture = self.attack_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
-        #* анимация смерти
-        self.cur_texture += 1
-        if self.cur_texture > 6 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.die_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-"""
+        # #* анимация смерти
+        # self.cur_texture += 1
+        # if self.cur_texture > 6 * UPDATES_PER_FRAME:
+        #     self.cur_texture = 0
+        # self.texture = self.die_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+
 
 
 class MyGame(arcade.Window):
@@ -213,292 +157,196 @@ class MyGame(arcade.Window):
         file_path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(file_path)
 
-        #* отслеживаем текущее состояние нажатой клавиши
-        self.left_pressed = False
-        self.right_pressed = False
-        self.up_pressed = False
-        self.down_pressed = False
-        self.jump_need_reset = False
-
-        #* Это списки которые отслеживают наши спрайты. Каждый спрайт должен войти в список.
-        #TODO: self.coin_list = None
+        # Sprite lists
         self.wall_list = None
-        #? self.background_list = None
-        #TODO: self.ladder_list = None
         self.player_list = None
+        # self.coin_list = None
+
+        # Set up the player
+        self.score = 0
+        self.player = None
+
+        self.physics_engine = None
+        self.view_left = 0
+        self.view_bottom = 0
+        self.end_of_map = 0
+        self.game_over = False
+        self.last_time = None
+        self.frame_count = 0
+        self.fps_message = None
         self.background = None
 
-        #* Отдельная переменная которая содержит спрайт игрока
-        self.player_sprite = None
-
-        #* Инициализируем физический движок
-        self.physics_engine = None
-
-        #* Используем для отслеживания нашего скролинга
-        self.view_bottom = 0
-        self.view_left = 0
-        #TODO: self.view_right = 0
-        #TODO: self.view_top = 0
-
-        #* Настраиваем конец карты
-        self.end_of_map = 0
-
-        #* Отслеживание очков
-        self.score = 0
-
-        #* Ещё несколько параметров для реализации
-        #TODO: self.game_over = False
-        #TODO: self.last_time = None
-        #TODO: self.frame_count = 0
-        #TODO: self.fps_message = None
-
-        #* Загрузка свуковых эффектов
-        #TODO: self.collect_coin_sound = arcade.load_sound("указываем расположение файла")
-        #TODO: self.jump_sound = arcade.load_sound("указываем расположение файла")
-        #TODO: self.game_over = arcade.load_sound("указываем расположение файла")
-
-
     def setup(self):
-        """ Настройка игры и инициализация переменных. """
+        """ Set up the game and initialize the variables. """
 
-        #* Устанавливаем задний фон для нашей карты
         self.background = arcade.load_texture("sprites/background.png")
 
-        #? Нужно ли опять писать это тут когда написано выше? Но делаю по примеру.
-        self.view_bottom = 0
-        self.view_left = 0
-        #TODO: self. view_score = 0
-
-        #* Создаём спрайт листы
+        # Sprite lists
         self.player_list = arcade.SpriteList()
-        self.player_sprite = arcade.SpriteList()
-        #TODO: self.coin_list = arcade.SpriteList()
+        # self.coin_list = arcade.SpriteList()
 
-        #* Ссылаемся что список игрока равен классу что мы уже описали
-        self.player_sprite = PlayerCharacter()
+        self.player = PlayerCharacter()
 
-        #* Задаём начальные координаты старта персонажа, его размеры.
-        self.player_sprite.center_x = PLAYER_START_X
-        self.player_sprite.center_y = PLAYER_START_Y
-        self.player_sprite.scale = PLAYER_SCALING
-        self.player_list.append(self.player_sprite)
+        self.player.center_x = 196
+        self.player.center_y = 270
+        self.player.scale = 1
 
-        #* Задаём какую карту загружать и где она расположена
+        self.player_list.append(self.player)
+
+        # Set up the player
+        # self.player_sprite = arcade.Sprite(":resources:images/animated_characters/female_person/femalePerson_idle.png",
+        #                                    PLAYER_SCALING)
+
+        # Starting position of the player
+        # self.player_sprite.center_x = 196
+        # self.player_sprite.center_y = 270
+        # self.player_list.append(self.player_sprite)
+
+        # map_name = ":resources:/tmx_maps/map.tmx"
         map_name = "test4.tmx"
 
-        #* Читаем тайловую карту
+
+        # Read in the tiled map
         my_map = arcade.tilemap.read_tmx(map_name)
         self.end_of_map = my_map.map_size.width * GRID_PIXEL_SIZE
 
-        #* Вычисляем правый конец карты в пикселях
-        self.end_of_map = my_map.map_size.width * GRID_PIXEL_SIZE
-
-        #* --- Слой земли ---
+        # --- Platforms ---
         self.wall_list = arcade.tilemap.process_layer(my_map, 'ground', 1)
 
-        #* --- Слой монеток (пока не реализовано) ---
-        #TODO: self.coin_list = arcade.tilemap.process_layer(my_map, coin_layer_name, TILE_SCALING)
-
-        #* Движущиеся платформы
-        #TODO: moving_platforms_list = arcade.tilemap.process_layer(my_map, moving_platforms_layer, TILE_SCALING)
-        #TODO: for sprite in moving_platforms_list:
-        #TODO:    self.wall_list.append(sprite)
-
-        #* Объекты заднего фона
-        #TODO: self.background_list = arcade.tilemap.process_layer(my_map, "Background", TILE_SCALING)
-
-        #* Лестницы
-        #TODO: self.ladder_list = arcade.tilemap.process_layer(my_map, "Ladders", TILE_SCALING)
-
-        
-        # --- Other stuff
-        # Set the background color
-        # if my_map.background_color:
-        #     arcade.set_background_color(my_map.background_color)
-
-        #* Создаём физический движок
-        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
+    
+        # Keep player from running through the wall_list layer
+        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player,
                                                              self.wall_list,
-                                                             gravity_constant=GRAVITY)   #TODO: ещё нужно будет добавить ladder=self.ladder_list
+                                                             gravity_constant=GRAVITY)
 
+        # Set the view port boundaries
+        # These numbers set where we have 'scrolled' to.
+        self.view_left = 0
+        self.view_bottom = 0
+
+        self.game_over = False
 
     def on_draw(self):
         """
         Render the screen.
         """
+        # scale = SCREEN_WIDTH / self.background.width
+        # arcade.draw_lrwh_rectangle_textured(0, 0,
+        #                                     SCREEN_WIDTH, SCREEN_HEIGHT,
+        #                                     self.background)
+
+
+        self.frame_count += 1
+
+        # This command has to happen before we start drawing
         arcade.start_render()
 
-        #* Рисуем наши спрайты.
-        self.wall_list.draw()
-        self.background.draw()
-        #TODO: self.background_list.draw()
-        #TODO: self.ladder_list.draw()
-        #TODO: self.coin_list.draw()
+        scale = SCREEN_WIDTH / self.background.width
+        arcade.draw_lrwh_rectangle_textured(0, 0,
+                                            4800, 1280,
+                                            self.background)
+
+
+        # Draw all the sprites.
         self.player_list.draw()
+        self.wall_list.draw()
+        # self.coin_list.draw()
 
-        #* Отрисовка очков на экране, прокрутка по области просмотра
-        score_text = f"Score: {self.score}"
-        arcade.draw_text(score_text, 10 + self.view_left, 10 + view_bottom, arcade.scccolor.BLACK, 18)
+        # if self.last_time and self.frame_count % 60 == 0:
+        #     fps = 1.0 / (time.time() - self.last_time) * 60
+        #     self.fps_message = f"FPS: {fps:5.0f}"
 
+        # if self.fps_message:
+        #     arcade.draw_text(self.fps_message, self.view_left + 10, self.view_bottom + 40, arcade.color.BLACK, 14)
 
-    def process_keychange(self):
-        #* Вызывается когда мы надимаем клавиши вверх/вниз или когда мы включаем/ выключаем лестницы
+        # if self.frame_count % 60 == 0:
+        #     self.last_time = time.time()
 
-        #* Процесс движения вверх/вниз
-        if self.up_pressed and not self.down_pressed:
-            if self.physics_engine.is_on_ladder():
-                self.player_sprite.change_y = PLAYER_MOVEMENT_SPEED
-            elif self.physics_engine.can_jump() and not self.jump_need_reset:
-                self.player_sprite.change_y = PLAYER_JUMP_SPEED
-                self.jump_need_reset = True
-                #TODO: arcade.play_sound(self.jump_sound)
-        elif self.down_pressed and not self.up_pressed:
-            if self.physics_engine.is_on_ladder():
-                self.player_sprite.change_y = -PLAYER_MOVEMENT_SPEED
-
-        #* Процесс движения вверх/вниз когда мы на лестнице и не двигаемся
-        if self.physics_engine.is_on_ladder():
-            if not self.up_pressed and not self.down_pressed:
-                self.player_sprite.change_y = 0
-            elif self.up_pressed and self.down_pressed:
-                self.player_sprite.change_y = 0
-        
-        #* Процесс движения влево/вправо
-        if self.right_pressed and not self.left_pressed:
-            self.player_sprite.change_x = PLAYER_MOVEMENT_SPEED
-        elif self.left_pressed and not self.right_pressed:
-            self.player_sprite.change_x = -PLAYER_MOVEMENT_SPEED
-        else:
-            self.player_sprite.change_x = 0
-
+        # Put the text on the screen.
+        # Adjust the text position based on the view port so that we don't
+        # scroll the text too.
+        distance = self.player.right
+        output = f"Distance: {distance}"
+        arcade.draw_text(output, self.view_left + 10, self.view_bottom + 20, arcade.color.BLACK, 14)
+        print("HERE")
+        if self.game_over:
+            arcade.draw_text("Game Over", self.view_left + 200, self.view_bottom + 200, arcade.color.BLACK, 30)
 
     def on_key_press(self, key, modifiers):
-        #* Вызывается когда мы клавиша нажата.
-        if key ==arcade.key.UP or key == arcade.key.W:
-            self.up_pressed = True
-        elif key == arcade.key.DOWN or key == arcade.key.S:
-            self.down_pressed = True
-        elif key == arcade.key.LEFT or key == arcade.key.A:
-            self.left_pressed = True
-        elif key == arcade.key.RIGHT or key == arcade.key.D:
-            self.right_pressed = True
-        
-        self.process_keychange()
-
+        """
+        Called whenever the mouse moves.
+        """
+        if key == arcade.key.UP:
+            if self.physics_engine.can_jump():
+                self.player.change_y = JUMP_SPEED
+        elif key == arcade.key.LEFT:
+            self.player.change_x = -MOVEMENT_SPEED
+        elif key == arcade.key.RIGHT:
+            self.player.change_x = MOVEMENT_SPEED
 
     def on_key_release(self, key, modifiers):
-        #* Вызывается когда пользователь отпускает клавишу.
-
-        if key ==arcade.key.UP or key == arcade.key.W:
-            self.up_pressed = False
-        elif key == arcade.key.DOWN or key == arcade.key.S:
-            self.down_pressed = False
-        elif key == arcade.key.LEFT or key == arcade.key.A:
-            self.left_pressed = False
-        elif key == arcade.key.RIGHT or key == arcade.key.D:
-            self.right_pressed = False
-        
-        self.process_keychange()
-
+        """
+        Called when the user presses a mouse button.
+        """
+        if key == arcade.key.LEFT or key == arcade.key.RIGHT:
+            self.player.change_x = 0
 
     def on_update(self, delta_time):
-        #* Процесс обновления спрайтов и игровой логики.
+        """ Movement and game logic """
 
-        #* Движение игрока с физическим движком
-        self.physics_engine.update()
-
-        #* Обновление анимации
-        if self.physics_engine.can_jump():
-            self.player_sprite.can_jump = False
-        else:
-            self.player_sprite.can_jump = True
-        
-        #? Дальше мне немного не понятен процесс того что я описываю
-        if self.physics_engine.is_on_ladder() and not self.physics_engine.can_jump():
-            self.player_sprite.is_on_ladder = True
-            self.process_keychange()
-        else:
-            self.player_sprite.is_on_ladder = False
-            self.process_keychange()
-
-
-        #TODO: self.coin_list.update_animation(delta_time)
-        #TODO: self.background_list.update_animation(delta_time)
         self.player_list.update_animation(delta_time)
 
-        #* Обновление преград с движущимися платформами
-        self.wall_list.update()
+        if self.player.right >= self.end_of_map:
+            self.game_over = True
 
-        #* Логика отображающая не наткнулась ли движущаяся платформа
-        #* на преграду и не надо ли повернуть движение.
-        for wall in self.wall_list:
+        # Call update on all sprites (The sprites don't do much in this
+        # example though.)
+        if not self.game_over:
+            self.physics_engine.update()
 
-            if wall.boundary_right and wall.right > wall.boundary_right and wall.change_x > 0:
-                wall.change_x *= -1
-            if wall.boundary_left and wall.left < wall.boundary_left and wall.change_y < 0:
-                wall.change_x *= -1
-            if wall.boundary_top and wall.top > wall.boundary_top and wall.change_y > 0:
-                wall.change_y *= -1
-            if wall.boundary_bottom and wall.bottom < wall.boundary_bottom and wall.change_y < 0:
-                wall.change_y *= -1
+        # coins_hit = arcade.check_for_collision_with_list(self.player, self.coin_list)
+        # for coin in coins_hit:
+        #     coin.remove_from_sprite_lists()
+        #     self.score += 1
 
-        #* Отслеживание столкновений с монетками.
-        coin_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
+        # --- Manage Scrolling ---
 
-        #* Цикл отслеживает со сколькими монетами мы столкнулись и удаляет их
-        for coin in coin_hit_list:
+        # Track if we need to change the view port
 
-            #* Выясняем сколько очков стоит монетка
-            if 'Points' not in coin.properties:
-                print("Внимание собранная монетка не имеет характеристику очков")
-            else:
-                points = int(coin.properties['Points'])
-                self.score += points
+        changed = False
 
-            #* Удаление монетки.
-            coin.remove_from_sprite_lists()
-            arcade.play_sound(self.collect_coin_sound)
+        # Scroll left
+        left_bndry = self.view_left + VIEWPORT_LEFT_MARGIN
+        if self.player.left < left_bndry:
+            self.view_left -= left_bndry - self.player.left
+            changed = True
 
-            #* Отслеживание нужно ли нам поменять обзор(viewport)
-            changed_viewport = False
+        # Scroll right
+        right_bndry = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
+        if self.player.right > right_bndry:
+            self.view_left += self.player.right - right_bndry
+            changed = True
 
-            #* ===Скролинг===
+        # Scroll up
+        top_bndry = self.view_bottom + SCREEN_HEIGHT - VIEWPORT_MARGIN_TOP
+        if self.player.top > top_bndry:
+            self.view_bottom += self.player.top - top_bndry
+            changed = True
 
-            #* Скролинг влево
-            left_boundary = self.view_left + VIEWPORT_LEFT_MARGIN
-            if self.player_sprite.left < left_boundary:
-                self.view_left -= left_boundary - self.player_sprite.left
-                changed_viewport = True
+        # Scroll down
+        bottom_bndry = self.view_bottom + VIEWPORT_MARGIN_BOTTOM
+        if self.player.bottom < bottom_bndry:
+            self.view_bottom -= bottom_bndry - self.player.bottom
+            changed = True
 
-            #* Скролинг вправо
-            right_boundary = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.right > right_boundary:
-                self.view_left += self.player_sprite.right - right_boundary
-                changed_viewport = True
-
-            #* Скролинг вверх
-            top_boundary = self.view_bottom + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.top > top_boundary:
-                self.view_bottom += self.player_sprite.top - right_boundary
-                changed_viewport = True
-
-            #* Скролинг вниз
-            bottom_boundary = self.view_bottom + VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.bottom < bottom_boundary:
-                self.view_bottom -= bottom_boundary - self.player_sprite.bottom
-                changed_viewport = True
-
-            if changed_viewport:
-                #* Прокрутка только до целых чисел. Иначе мы получим пиксели 
-                #* которые не выстраиваются в линию на экране.
-                self.view_bottom = int(self.view_bottom)
-                self.view_left = int(self.view_left)
-
-                #* Скролинг
-                arcade.set_viewport(self.view_left, 
-                                    SCREEN_WIDTH + self.view_left, 
-                                    self.view_bottom, 
-                                    SCREEN_HEIGHT + self.view_bottom)
+        # If we need to scroll, go ahead and do it.
+        if changed:
+            self.view_left = int(self.view_left)
+            self.view_bottom = int(self.view_bottom)
+            arcade.set_viewport(self.view_left,
+                                SCREEN_WIDTH + self.view_left,
+                                self.view_bottom,
+                                SCREEN_HEIGHT + self.view_bottom)
 
 
 def main():
