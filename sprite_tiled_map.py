@@ -113,12 +113,7 @@ class PlayerCharacter(arcade.Sprite):
     def update_animation(self, delta_time=1 /60):
 
 
-#! ПРОБЛЕМА НАЧИНАЕТСЯ ЗДЕСЬ. НЕ ЗНАЮ КАК СОВМЕСТИТЬ КОД ДЛЯ СТАТИЧНОГО ПЕРСОНАЖА И АНИМИРОВАННОГО.
 
-        # #* анимация простоя(предыдущий вариант)
-        # if self.change_x == 0:
-        #     self.texture = self.idle_texture_pair[self.character_face_direction]
-        #     return
 
         #* анимация простоя
         if self.change_x == 0:
@@ -159,42 +154,7 @@ class PlayerCharacter(arcade.Sprite):
             self.cur_texture = 0
         self.texture = self.die_texture_pair[self.cur_texture][self.character_face_direction]
 
-"""        #* анимация стояния
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.idle_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
-        #* анимация бега
-        self.cur_texture += 1
-        if self.cur_texture > 5 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.run_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация прыжка
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.jump_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация каста
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.cast_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация атаки
-        self.cur_texture += 1
-        if self.cur_texture > 4 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.attack_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация смерти
-        self.cur_texture += 1
-        if self.cur_texture > 6 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.die_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-"""
 
 
 class MyGame(arcade.Window):
