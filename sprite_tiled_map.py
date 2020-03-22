@@ -125,7 +125,7 @@ class PlayerCharacter(arcade.Sprite):
             self.cur_texture += 1
             if self.cur_texture >3:
                 self.cur_texture = 0
-            self.texture = self.idle_texture_pair[self.character_face_direction]
+            self.texture = self.idle_texture_pair[self.cur_texture][self.character_face_direction]
             return
 
 
@@ -133,7 +133,7 @@ class PlayerCharacter(arcade.Sprite):
         self.cur_texture += 1
         if self.cur_texture > 5:
             self.cur_texture = 0
-        self.texture = self.run_texture_pair[self.set_texture][self.character_face_direction]
+        self.texture = self.run_texture_pair[self.cur_texture][self.character_face_direction]
 
         #* анимация прыжка
         self.cur_texture += 1
@@ -327,6 +327,7 @@ class MyGame(arcade.Window):
         Render the screen.
         """
         arcade.start_render()
+        self.player_list.draw()
 
         #* Рисуем наши спрайты.
         self.wall_list.draw()
@@ -334,7 +335,6 @@ class MyGame(arcade.Window):
         #TODO: self.background_list.draw()
         #TODO: self.ladder_list.draw()
         #TODO: self.coin_list.draw()
-        self.player_list.draw()
 
         #* Отрисовка очков на экране, прокрутка по области просмотра
         score_text = f"Score: {self.score}"
@@ -443,62 +443,62 @@ class MyGame(arcade.Window):
                 wall.change_y *= -1
 
         #* Отслеживание столкновений с монетками.
-        coin_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
+        # coin_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
 
         #* Цикл отслеживает со сколькими монетами мы столкнулись и удаляет их
-        for coin in coin_hit_list:
+        # for coin in coin_hit_list:
 
-            #* Выясняем сколько очков стоит монетка
-            if 'Points' not in coin.properties:
-                print("Внимание собранная монетка не имеет характеристику очков")
-            else:
-                points = int(coin.properties['Points'])
-                self.score += points
+        #     #* Выясняем сколько очков стоит монетка
+        #     if 'Points' not in coin.properties:
+        #         print("Внимание собранная монетка не имеет характеристику очков")
+        #     else:
+        #         points = int(coin.properties['Points'])
+        #         self.score += points
 
-            #* Удаление монетки.
-            coin.remove_from_sprite_lists()
-            arcade.play_sound(self.collect_coin_sound)
+        #     #* Удаление монетки.
+        #     coin.remove_from_sprite_lists()
+        #     arcade.play_sound(self.collect_coin_sound)
 
-            #* Отслеживание нужно ли нам поменять обзор(viewport)
-            changed_viewport = False
+        #* Отслеживание нужно ли нам поменять обзор(viewport)
+        changed_viewport = False
 
             #* ===Скролинг===
 
             #* Скролинг влево
-            left_boundary = self.view_left + VIEWPORT_LEFT_MARGIN
-            if self.player_sprite.left < left_boundary:
-                self.view_left -= left_boundary - self.player_sprite.left
-                changed_viewport = True
+        left_boundary = self.view_left + VIEWPORT_LEFT_MARGIN
+        if self.player_sprite.left < left_boundary:
+            self.view_left -= left_boundary - self.player_sprite.left
+            changed_viewport = True
 
-            #* Скролинг вправо
-            right_boundary = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.right > right_boundary:
-                self.view_left += self.player_sprite.right - right_boundary
-                changed_viewport = True
+        #* Скролинг вправо
+        right_boundary = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
+        if self.player_sprite.right > right_boundary:
+            self.view_left += self.player_sprite.right - right_boundary
+            changed_viewport = True
 
-            #* Скролинг вверх
-            top_boundary = self.view_bottom + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.top > top_boundary:
-                self.view_bottom += self.player_sprite.top - right_boundary
-                changed_viewport = True
+        #* Скролинг вверх
+        top_boundary = self.view_bottom + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
+        if self.player_sprite.top > top_boundary:
+            self.view_bottom += self.player_sprite.top - right_boundary
+            changed_viewport = True
 
-            #* Скролинг вниз
-            bottom_boundary = self.view_bottom + VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.bottom < bottom_boundary:
-                self.view_bottom -= bottom_boundary - self.player_sprite.bottom
-                changed_viewport = True
+        #* Скролинг вниз
+        bottom_boundary = self.view_bottom + VIEWPORT_RIGHT_MARGIN
+        if self.player_sprite.bottom < bottom_boundary:
+            self.view_bottom -= bottom_boundary - self.player_sprite.bottom
+            changed_viewport = True
 
-            if changed_viewport:
-                #* Прокрутка только до целых чисел. Иначе мы получим пиксели 
-                #* которые не выстраиваются в линию на экране.
-                self.view_bottom = int(self.view_bottom)
-                self.view_left = int(self.view_left)
+        if changed_viewport:
+            #* Прокрутка только до целых чисел. Иначе мы получим пиксели 
+            #* которые не выстраиваются в линию на экране.
+            self.view_bottom = int(self.view_bottom)
+            self.view_left = int(self.view_left)
 
-                #* Скролинг
-                arcade.set_viewport(self.view_left, 
-                                    SCREEN_WIDTH + self.view_left, 
-                                    self.view_bottom, 
-                                    SCREEN_HEIGHT + self.view_bottom)
+            #* Скролинг
+            arcade.set_viewport(self.view_left, 
+                                SCREEN_WIDTH + self.view_left, 
+                                self.view_bottom, 
+                                SCREEN_HEIGHT + self.view_bottom)
 
 
 def main():
