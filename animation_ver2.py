@@ -68,31 +68,6 @@ class PlayerCharacter(arcade.Sprite):
         self.climbing = False
         self.is_on_ladder = False
 
-        # --- Load Textures ---
-
-        # Images from Kenney.nl's Asset Pack 3
-        # main_path = ":resources:images/animated_characters/female_adventurer/femaleAdventurer"
-        # main_path = ":resources:images/animated_characters/female_person/femalePerson"
-        # main_path = ":resources:images/animated_characters/male_person/malePerson"
-        # main_path = ":resources:images/animated_characters/male_adventurer/maleAdventurer"
-        # main_path = ":resources:images/animated_characters/zombie/zombie"
-        # main_path = ":resources:images/animated_characters/robot/robot"
-        # main_path = "sprites/player/Knight/
-
-        # Load textures for idle standing
-        # self.idle_textures = load_texture_pair(f"{main_path}_idle.png")
-        # self.jump_textures = load_texture_pair(f"{main_path}_jump.png")
-        # self.fall_textures = load_texture_pair(f"{main_path}_fall.png")
-
-        # self.idle_textures = load_texture_pair("sprites/player/Knight/noBKG_KnightIdle_strip.png")
-        # self.jump_textures = load_texture_pair("sprites/player/Knight/noBKG_KnightJumpAndFall_strip.png")
-        # self.fall_textures = load_texture_pair("sprites/player/Knight/noBKG_KnightJumpAndFall_strip.png")
-
-        # Load textures for walking
-        # self.walk_textures = []
-        # for i in range(8):
-        #     texture = load_texture_pair("sprites/player/Knight/noBKG_KnightRun_strip.png")
-        #     self.walk_textures.append(texture)
 
         self.idle_textures = []
         for i in range(15):
@@ -161,22 +136,28 @@ class PlayerCharacter(arcade.Sprite):
 
         # Jumping animation
         if self.change_y > 0 and not self.is_on_ladder:
-            self.texture = self.jump_textures[self.character_face_direction]
+            self.texture = self.jump_textures[self.cur_texture]
             return
         elif self.change_y < 0 and not self.is_on_ladder:
-            self.texture = self.fall_textures[self.character_face_direction]
+            self.texture = self.fall_textures[self.cur_texture]
             return
 
-        # Idle animation
+
+#* анимация простоя
         if self.change_x == 0:
-            self.texture = self.idle_textures[self.character_face_direction]
-            return
+            self.cur_texture += 1
+            if self.cur_texture >14:
+                self.cur_texture = 0
+                self.texture = self.idle_textures[self.cur_texture]
+            # return
+
+
 
         # Walking animation
         self.cur_texture += 1
         if self.cur_texture > 7:
             self.cur_texture = 0
-            self.texture = self.walk_textures[self.cur_texture][self.character_face_direction]
+            self.texture = self.walk_textures[self.cur_texture]
 
 
 class MyGame(arcade.Window):
