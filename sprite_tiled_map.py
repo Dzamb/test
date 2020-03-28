@@ -24,8 +24,8 @@ VIEWPORT_RIGHT_MARGIN = 270
 VIEWPORT_LEFT_MARGIN = 270
 
 # Physics
-MOVEMENT_SPEED = 5
-JUMP_SPEED = 23
+MOVEMENT_SPEED = 6
+JUMP_SPEED = 6
 GRAVITY = 1.1
 UPDATES_PER_FRAME = 7
 CHARACTER_SCALING = 1
@@ -63,7 +63,6 @@ class PlayerCharacter(arcade.Sprite):
 #!        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
 
 #*   ===Загрузка текстур===
-
         #* Указываем папку содержащую все изображения
         main_path = "sprites/player/adventurer"
 
@@ -83,6 +82,12 @@ class PlayerCharacter(arcade.Sprite):
         self.jump_texture_pair = []
         for i in range(4):
             texture = load_texture_pair(f"{main_path}-jump-{i}.png")
+            self.jump_texture_pair.append(texture)
+
+        #* Загрузка текстур падения для левого и правого состояния
+        self.fall_texture_pair = []
+        for i in range(2):
+            texture = load_texture_pair(f"{main_path}-fall-{i}.png")
             self.jump_texture_pair.append(texture)
 
         #* Загрузка текстур каста заклинания для левого и правого состояния
@@ -112,34 +117,51 @@ class PlayerCharacter(arcade.Sprite):
 
     def update_animation(self, delta_time=1 /60):
 
-
-#! ПРОБЛЕМА НАЧИНАЕТСЯ ЗДЕСЬ. НЕ ЗНАЮ КАК СОВМЕСТИТЬ КОД ДЛЯ СТАТИЧНОГО ПЕРСОНАЖА И АНИМИРОВАННОГО.
-
-        # #* анимация простоя(предыдущий вариант)
-        # if self.change_x == 0:
-        #     self.texture = self.idle_texture_pair[self.character_face_direction]
-        #     return
+        if self.change_x < 0 and self.character_face_direction == RIGHT_FACING:
+            self.character_face_direction = LEFT_FACING
+        elif self.change_x > 0 and self.character_face_direction == LEFT_FACING:
+            self.character_face_direction = RIGHT_FACING
 
         #* анимация простоя
         if self.change_x == 0:
             self.cur_texture += 1
-            if self.cur_texture >3:
+            if self.cur_texture > 3 * 7:
                 self.cur_texture = 0
-            self.texture = self.idle_texture_pair[self.character_face_direction]
+            self.texture = self.idle_texture_pair[self.cur_texture // 7][self.character_face_direction]
             return
 
 
         #* анимация бега
         self.cur_texture += 1
-        if self.cur_texture > 5:
+        if self.cur_texture > 5 * 7:
             self.cur_texture = 0
-        self.texture = self.run_texture_pair[self.set_texture][self.character_face_direction]
+        self.texture = self.run_texture_pair[self.cur_texture // 7][self.character_face_direction]
+        return
 
         #* анимация прыжка
-        self.cur_texture += 1
-        if self.cur_texture > 3:
-            self.cur_texture = 0
-        self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
+
+        if self.change_y > 0 and not self.is_on_ladder:
+            self.texture = self.jump_texture_pair[self.character_face_direction]
+            return
+        elif self.change_y < 0 and not self.is_on_ladder:
+            self.texture = self.fall_texture_pair[self.character_face_direction]
+            return
+
+
+
+
+
+
+
+
+
+
+
+        # self.cur_texture += 1
+        # if self.cur_texture > 3:
+        #     self.cur_texture = 0
+        # self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
+        # return
 
         #* анимация каста заклинания
         self.cur_texture += 1
@@ -159,42 +181,7 @@ class PlayerCharacter(arcade.Sprite):
             self.cur_texture = 0
         self.texture = self.die_texture_pair[self.cur_texture][self.character_face_direction]
 
-"""        #* анимация стояния
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.idle_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
 
-        #* анимация бега
-        self.cur_texture += 1
-        if self.cur_texture > 5 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.run_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация прыжка
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.jump_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация каста
-        self.cur_texture += 1
-        if self.cur_texture > 3 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.cast_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация атаки
-        self.cur_texture += 1
-        if self.cur_texture > 4 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.attack_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-
-        #* анимация смерти
-        self.cur_texture += 1
-        if self.cur_texture > 6 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        self.texture = self.die_textures[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-"""
 
 
 class MyGame(arcade.Window):
@@ -327,6 +314,7 @@ class MyGame(arcade.Window):
         Render the screen.
         """
         arcade.start_render()
+        self.player_list.draw()
 
         #* Рисуем наши спрайты.
         self.wall_list.draw()
@@ -334,7 +322,6 @@ class MyGame(arcade.Window):
         #TODO: self.background_list.draw()
         #TODO: self.ladder_list.draw()
         #TODO: self.coin_list.draw()
-        self.player_list.draw()
 
         #* Отрисовка очков на экране, прокрутка по области просмотра
         score_text = f"Score: {self.score}"
@@ -402,6 +389,8 @@ class MyGame(arcade.Window):
 
 
     def on_update(self, delta_time):
+        self.player_list.update_animation(1000)
+        self.wall_list.update()
         #* Процесс обновления спрайтов и игровой логики.
 
         #* Движение игрока с физическим движком
@@ -424,10 +413,10 @@ class MyGame(arcade.Window):
 
         #TODO: self.coin_list.update_animation(delta_time)
         #TODO: self.background_list.update_animation(delta_time)
-        self.player_list.update_animation(delta_time)
+        
 
         #* Обновление преград с движущимися платформами
-        self.wall_list.update()
+        
 
         #* Логика отображающая не наткнулась ли движущаяся платформа
         #* на преграду и не надо ли повернуть движение.
@@ -443,62 +432,62 @@ class MyGame(arcade.Window):
                 wall.change_y *= -1
 
         #* Отслеживание столкновений с монетками.
-        coin_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
+        # coin_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
 
         #* Цикл отслеживает со сколькими монетами мы столкнулись и удаляет их
-        for coin in coin_hit_list:
+        # for coin in coin_hit_list:
 
-            #* Выясняем сколько очков стоит монетка
-            if 'Points' not in coin.properties:
-                print("Внимание собранная монетка не имеет характеристику очков")
-            else:
-                points = int(coin.properties['Points'])
-                self.score += points
+        #     #* Выясняем сколько очков стоит монетка
+        #     if 'Points' not in coin.properties:
+        #         print("Внимание собранная монетка не имеет характеристику очков")
+        #     else:
+        #         points = int(coin.properties['Points'])
+        #         self.score += points
 
-            #* Удаление монетки.
-            coin.remove_from_sprite_lists()
-            arcade.play_sound(self.collect_coin_sound)
+        #     #* Удаление монетки.
+        #     coin.remove_from_sprite_lists()
+        #     arcade.play_sound(self.collect_coin_sound)
 
-            #* Отслеживание нужно ли нам поменять обзор(viewport)
-            changed_viewport = False
+        #* Отслеживание нужно ли нам поменять обзор(viewport)
+        changed_viewport = False
 
             #* ===Скролинг===
 
             #* Скролинг влево
-            left_boundary = self.view_left + VIEWPORT_LEFT_MARGIN
-            if self.player_sprite.left < left_boundary:
-                self.view_left -= left_boundary - self.player_sprite.left
-                changed_viewport = True
+        left_boundary = self.view_left + VIEWPORT_LEFT_MARGIN
+        if self.player_sprite.left < left_boundary:
+            self.view_left -= left_boundary - self.player_sprite.left
+            changed_viewport = True
 
-            #* Скролинг вправо
-            right_boundary = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.right > right_boundary:
-                self.view_left += self.player_sprite.right - right_boundary
-                changed_viewport = True
+        #* Скролинг вправо
+        right_boundary = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
+        if self.player_sprite.right > right_boundary:
+            self.view_left += self.player_sprite.right - right_boundary
+            changed_viewport = True
 
-            #* Скролинг вверх
-            top_boundary = self.view_bottom + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.top > top_boundary:
-                self.view_bottom += self.player_sprite.top - right_boundary
-                changed_viewport = True
+        #* Скролинг вверх
+        top_boundary = self.view_bottom + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
+        if self.player_sprite.top > top_boundary:
+            self.view_bottom += self.player_sprite.top - right_boundary
+            changed_viewport = True
 
-            #* Скролинг вниз
-            bottom_boundary = self.view_bottom + VIEWPORT_RIGHT_MARGIN
-            if self.player_sprite.bottom < bottom_boundary:
-                self.view_bottom -= bottom_boundary - self.player_sprite.bottom
-                changed_viewport = True
+        #* Скролинг вниз
+        bottom_boundary = self.view_bottom + VIEWPORT_RIGHT_MARGIN
+        if self.player_sprite.bottom < bottom_boundary:
+            self.view_bottom -= bottom_boundary - self.player_sprite.bottom
+            changed_viewport = True
 
-            if changed_viewport:
-                #* Прокрутка только до целых чисел. Иначе мы получим пиксели 
-                #* которые не выстраиваются в линию на экране.
-                self.view_bottom = int(self.view_bottom)
-                self.view_left = int(self.view_left)
+        if changed_viewport:
+            #* Прокрутка только до целых чисел. Иначе мы получим пиксели 
+            #* которые не выстраиваются в линию на экране.
+            self.view_bottom = int(self.view_bottom)
+            self.view_left = int(self.view_left)
 
-                #* Скролинг
-                arcade.set_viewport(self.view_left, 
-                                    SCREEN_WIDTH + self.view_left, 
-                                    self.view_bottom, 
-                                    SCREEN_HEIGHT + self.view_bottom)
+            #* Скролинг
+            arcade.set_viewport(self.view_left, 
+                                SCREEN_WIDTH + self.view_left, 
+                                self.view_bottom, 
+                                SCREEN_HEIGHT + self.view_bottom)
 
 
 def main():
