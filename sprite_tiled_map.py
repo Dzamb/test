@@ -8,20 +8,20 @@ PLAYER_SCALING = 1
 PLAYER_START_X = 196
 PLAYER_START_Y = 200
 PLAYER_MOVEMENT_SPEED = 7
-PLAYER_JUMP_SPEED = 30
+PLAYER_JUMP_SPEED = 25
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 800
 SCREEN_TITLE = "17-th Update"
 SPRITE_PIXEL_SIZE = 128
 GRID_PIXEL_SIZE = (SPRITE_PIXEL_SIZE * TILE_SCALING)
 
 # How many pixels to keep as a minimum margin between the character
 # and the edge of the screen.
-VIEWPORT_MARGIN_TOP = 60
-VIEWPORT_MARGIN_BOTTOM = 60
-VIEWPORT_RIGHT_MARGIN = 270
-VIEWPORT_LEFT_MARGIN = 270
+VIEWPORT_MARGIN_TOP = 90
+VIEWPORT_MARGIN_BOTTOM = 90
+VIEWPORT_RIGHT_MARGIN = 300
+VIEWPORT_LEFT_MARGIN = 300
 
 # Physics
 MOVEMENT_SPEED = 6
@@ -125,43 +125,28 @@ class PlayerCharacter(arcade.Sprite):
         #* анимация простоя
         if self.change_x == 0:
             self.cur_texture += 1
-            if self.cur_texture > 3 * 7:
+            if self.cur_texture > 3 * UPDATES_PER_FRAME:
                 self.cur_texture = 0
-            self.texture = self.idle_texture_pair[self.cur_texture // 7][self.character_face_direction]
+            self.texture = self.idle_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
             return
 
 
         #* анимация бега
         self.cur_texture += 1
-        if self.cur_texture > 5 * 7:
+        if self.cur_texture > 5 * UPDATES_PER_FRAME:
             self.cur_texture = 0
-        self.texture = self.run_texture_pair[self.cur_texture // 7][self.character_face_direction]
+        self.texture = self.run_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
         return
 
-        #* анимация прыжка
-
+        #* анимация прыжка и падения
         if self.change_y > 0 and not self.is_on_ladder:
-            self.texture = self.jump_texture_pair[self.character_face_direction]
+            self.cur_texture += 1
+            self.texture = self.jump_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
             return
         elif self.change_y < 0 and not self.is_on_ladder:
-            self.texture = self.fall_texture_pair[self.character_face_direction]
+            self.cur_texture += 1
+            self.texture = self.fall_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
             return
-
-
-
-
-
-
-
-
-
-
-
-        # self.cur_texture += 1
-        # if self.cur_texture > 3:
-        #     self.cur_texture = 0
-        # self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
-        # return
 
         #* анимация каста заклинания
         self.cur_texture += 1
@@ -205,7 +190,9 @@ class MyGame(arcade.Window):
         self.right_pressed = False
         self.up_pressed = False
         self.down_pressed = False
-        self.jump_need_reset = False
+        self.jump_needs_reset = False
+        self.cast_pressed = False
+        self.attack_pressed = False
 
         #* Это списки которые отслеживают наши спрайты. Каждый спрайт должен войти в список.
         #TODO: self.coin_list = None
@@ -335,10 +322,10 @@ class MyGame(arcade.Window):
         if self.up_pressed and not self.down_pressed:
             if self.physics_engine.is_on_ladder():
                 self.player_sprite.change_y = PLAYER_MOVEMENT_SPEED
-            elif self.physics_engine.can_jump() and not self.jump_need_reset:
+            elif self.physics_engine.can_jump() and not self.jump_needs_reset:
                 self.player_sprite.change_y = PLAYER_JUMP_SPEED
-                self.jump_need_reset = True
-                #TODO: arcade.play_sound(self.jump_sound)
+                self.jump_needs_reset = True
+                # arcade.play_sound(self.jump_sound)
         elif self.down_pressed and not self.up_pressed:
             if self.physics_engine.is_on_ladder():
                 self.player_sprite.change_y = -PLAYER_MOVEMENT_SPEED
@@ -376,8 +363,9 @@ class MyGame(arcade.Window):
     def on_key_release(self, key, modifiers):
         #* Вызывается когда пользователь отпускает клавишу.
 
-        if key ==arcade.key.UP or key == arcade.key.W:
+        if key == arcade.key.UP or key == arcade.key.W:
             self.up_pressed = False
+            self.jump_needs_reset = False
         elif key == arcade.key.DOWN or key == arcade.key.S:
             self.down_pressed = False
         elif key == arcade.key.LEFT or key == arcade.key.A:
