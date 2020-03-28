@@ -24,8 +24,8 @@ VIEWPORT_RIGHT_MARGIN = 270
 VIEWPORT_LEFT_MARGIN = 270
 
 # Physics
-MOVEMENT_SPEED = 5
-JUMP_SPEED = 23
+MOVEMENT_SPEED = 6
+JUMP_SPEED = 6
 GRAVITY = 1.1
 UPDATES_PER_FRAME = 7
 CHARACTER_SCALING = 1
@@ -63,7 +63,6 @@ class PlayerCharacter(arcade.Sprite):
 #!        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
 
 #*   ===Загрузка текстур===
-
         #* Указываем папку содержащую все изображения
         main_path = "sprites/player/adventurer"
 
@@ -83,6 +82,12 @@ class PlayerCharacter(arcade.Sprite):
         self.jump_texture_pair = []
         for i in range(4):
             texture = load_texture_pair(f"{main_path}-jump-{i}.png")
+            self.jump_texture_pair.append(texture)
+
+        #* Загрузка текстур падения для левого и правого состояния
+        self.fall_texture_pair = []
+        for i in range(2):
+            texture = load_texture_pair(f"{main_path}-fall-{i}.png")
             self.jump_texture_pair.append(texture)
 
         #* Загрузка текстур каста заклинания для левого и правого состояния
@@ -112,29 +117,51 @@ class PlayerCharacter(arcade.Sprite):
 
     def update_animation(self, delta_time=1 /60):
 
-
-
+        if self.change_x < 0 and self.character_face_direction == RIGHT_FACING:
+            self.character_face_direction = LEFT_FACING
+        elif self.change_x > 0 and self.character_face_direction == LEFT_FACING:
+            self.character_face_direction = RIGHT_FACING
 
         #* анимация простоя
         if self.change_x == 0:
             self.cur_texture += 1
-            if self.cur_texture >3:
+            if self.cur_texture > 3 * 7:
                 self.cur_texture = 0
-            self.texture = self.idle_texture_pair[self.cur_texture][self.character_face_direction]
+            self.texture = self.idle_texture_pair[self.cur_texture // 7][self.character_face_direction]
             return
 
 
         #* анимация бега
         self.cur_texture += 1
-        if self.cur_texture > 5:
+        if self.cur_texture > 5 * 7:
             self.cur_texture = 0
-        self.texture = self.run_texture_pair[self.cur_texture][self.character_face_direction]
+        self.texture = self.run_texture_pair[self.cur_texture // 7][self.character_face_direction]
+        return
 
         #* анимация прыжка
-        self.cur_texture += 1
-        if self.cur_texture > 3:
-            self.cur_texture = 0
-        self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
+
+        if self.change_y > 0 and not self.is_on_ladder:
+            self.texture = self.jump_texture_pair[self.character_face_direction]
+            return
+        elif self.change_y < 0 and not self.is_on_ladder:
+            self.texture = self.fall_texture_pair[self.character_face_direction]
+            return
+
+
+
+
+
+
+
+
+
+
+
+        # self.cur_texture += 1
+        # if self.cur_texture > 3:
+        #     self.cur_texture = 0
+        # self.texture = self.jump_texture_pair[self.cur_texture][self.character_face_direction]
+        # return
 
         #* анимация каста заклинания
         self.cur_texture += 1
@@ -362,6 +389,8 @@ class MyGame(arcade.Window):
 
 
     def on_update(self, delta_time):
+        self.player_list.update_animation(1000)
+        self.wall_list.update()
         #* Процесс обновления спрайтов и игровой логики.
 
         #* Движение игрока с физическим движком
@@ -384,10 +413,10 @@ class MyGame(arcade.Window):
 
         #TODO: self.coin_list.update_animation(delta_time)
         #TODO: self.background_list.update_animation(delta_time)
-        self.player_list.update_animation(delta_time)
+        
 
         #* Обновление преград с движущимися платформами
-        self.wall_list.update()
+        
 
         #* Логика отображающая не наткнулась ли движущаяся платформа
         #* на преграду и не надо ли повернуть движение.
