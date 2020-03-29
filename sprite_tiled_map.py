@@ -88,7 +88,7 @@ class PlayerCharacter(arcade.Sprite):
         self.fall_texture_pair = []
         for i in range(2):
             texture = load_texture_pair(f"{main_path}-fall-{i}.png")
-            self.jump_texture_pair.append(texture)
+            self.fall_texture_pair.append(texture)
 
         #* Загрузка текстур каста заклинания для левого и правого состояния
         self.cast_texture_pair = []
@@ -123,30 +123,35 @@ class PlayerCharacter(arcade.Sprite):
             self.character_face_direction = RIGHT_FACING
 
         #* анимация простоя
-        if self.change_x == 0:
+        if self.change_x == 0 and self.change_y == 0:
             self.cur_texture += 1
             if self.cur_texture > 3 * UPDATES_PER_FRAME:
                 self.cur_texture = 0
             self.texture = self.idle_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
             return
 
+        #* анимация прыжка и падения
+        if self.change_y > 0 and not self.is_on_ladder:
+            self.cur_texture += 1
+            if self.cur_texture > 3 * UPDATES_PER_FRAME:
+                self.cur_texture = 0
+            self.texture = self.jump_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+            return
+        elif self.change_y < 0 and not self.is_on_ladder:
+            self.cur_texture += 1
+            if self.cur_texture > 1:
+                self.cur_texture = 0
+            self.texture = self.fall_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+            return
+
 
         #* анимация бега
-        self.cur_texture += 1
+        self.cur_texture += 1 and self.change_y == 0
         if self.cur_texture > 5 * UPDATES_PER_FRAME:
             self.cur_texture = 0
         self.texture = self.run_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
         return
 
-        #* анимация прыжка и падения
-        if self.change_y > 0 and not self.is_on_ladder:
-            self.cur_texture += 1
-            self.texture = self.jump_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-            return
-        elif self.change_y < 0 and not self.is_on_ladder:
-            self.cur_texture += 1
-            self.texture = self.fall_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
-            return
 
         #* анимация каста заклинания
         self.cur_texture += 1
