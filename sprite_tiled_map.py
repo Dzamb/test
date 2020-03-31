@@ -2,6 +2,9 @@
 import arcade
 import os
 import time
+import math
+import sys
+import random
 
 TILE_SCALING = 0.5
 PLAYER_SCALING = 1
@@ -9,6 +12,7 @@ PLAYER_START_X = 196
 PLAYER_START_Y = 200
 PLAYER_MOVEMENT_SPEED = 7
 PLAYER_JUMP_SPEED = 25
+FIREBOLL_SPEED = 5
 
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 800
@@ -54,15 +58,20 @@ class PlayerCharacter(arcade.Sprite):
         self.cur_texture = 0
         self.scale = CHARACTER_SCALING
 
+        self.running_sound = arcade.load_sound("sprites/sounds/beg.mp3")
+        self.jumping_sound = arcade.load_sound("sprites/sounds/Jump3.wav")
+
         #* Отслеживание наших состояний
         self.jumping = False
         self.climbing = False
         self.is_on_ladder = False
-        # self.is_death = False
+        self.is_death = False
+        self.is_attack = False
+        self.is_casting = False
 
-#!        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+        #!        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
 
-#*   ===Загрузка текстур===
+        #*   ===Загрузка текстур===
         #* Указываем папку содержащую все изображения
         main_path = "sprites/player/adventurer"
 
@@ -134,6 +143,7 @@ class PlayerCharacter(arcade.Sprite):
         if self.change_y > 0 and not self.is_on_ladder:
             self.cur_texture += 1
             if self.cur_texture > 3 * UPDATES_PER_FRAME:
+                arcade.play_sound(self.jumping_sound)
                 self.cur_texture = 0
             self.texture = self.jump_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
             return
@@ -148,8 +158,10 @@ class PlayerCharacter(arcade.Sprite):
         #* анимация бега
         self.cur_texture += 1 and self.change_y == 0
         if self.cur_texture > 5 * UPDATES_PER_FRAME:
+            arcade.play_sound(self.running_sound)
             self.cur_texture = 0
         self.texture = self.run_texture_pair[self.cur_texture // UPDATES_PER_FRAME][self.character_face_direction]
+        # arcade.play_sound(self.running_sound)
         return
 
 
@@ -158,18 +170,114 @@ class PlayerCharacter(arcade.Sprite):
         if self.cur_texture > 3:
             self.cur_texture = 0
         self.texture = self.cast_texture_pair[self.cur_texture][self.character_face_direction]
+        return
 
         #* анимация атаки мечём
         self.cur_texture +=1
         if self.cur_texture > 4:
             self.cur_texture = 0
         self.texture = self.attack_texture_pair[self.cur_texture][self.character_face_direction]
+        return
 
         #* анимация смерти
         self.cur_texture += 1
         if self.cur_texture > 6:
             self.cur_texture = 0
         self.texture = self.die_texture_pair[self.cur_texture][self.character_face_direction]
+        return
+
+
+
+
+
+
+
+
+
+
+class Arrow(arcade.Sprite):
+    def update(self):
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+
+
+class Fireball(arcade.Sprite):
+    def update(self):
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+        self.angle += 20
+
+
+class Enemy(arcade.Sprite):
+    def _init_(self):
+        super().__init__()
+        self.player = None
+        self.curtime = 0
+        self.delay = 0
+        self.growl = False
+        self.fireball_list = None
+        self.sound_list = None
+        self.coin_list = None
+        self.health = 100
+        self.death_animation = 0
+
+    def shoot(self):
+        if self.player.alive:
+            # arcade.play_sound(self.sound_list[4])
+
+            fireball = Fireball("sprites/effects/fireboll/1_0.png")
+            fireball.center_x = self.center_x
+            fireball.center_y = self.center_y
+            fireball.reflected = False
+
+            local_speed = 4
+            x_diff = self.player.center_x - self.center_x
+            y_diff = self.player.center_y - self.center_y
+            angle = math.atan2(y_diff, x_diff)
+            fireball.angle = math.degrees(angle)
+            fireball.change_x = math.cos(angle) * local_speed
+            fireball.change_y = math.sin(angle) * local_speed
+
+            self.fireball_list.append(fireball)
+
+    def update(self):
+        self.curtime += 1
+
+        # If enemy dies play death animation
+        if self.health <= 0 and self.death_animation == 0:
+            self.death_animation = self.curtime + 30
+        if self.death_animation - 20 > self.curtime:
+            self.set_texture(1)
+        elif self.death_animation - 10 > self.curtime:
+            self.set_texture(2)
+        elif self.death_animation > self.curtime:
+            # Spawn a coin on death
+            coin = arcade.Sprite("images/coin.png", 0.1)
+            coin.center_x = self.center_x
+            coin.center_y = self.center_y
+            coin.force = 0
+            self.coin_list.append(coin)
+            self.kill()
+
+
+        # If player is nearby shoot at him every 100-200 frames
+        d = math.sqrt(((self.center_x - self.player.center_x) ** 2) + ((self.center_y - self.player.center_y) ** 2))
+        if d < 150 and self.health > 0:
+            if not self.growl:
+                self.growl = True
+                arcade.play_sound(self.sound_list[5])
+
+            x_diff = self.player.center_x - self.center_x
+            y_diff = self.player.center_y - self.center_y
+            self.angle = math.degrees(math.atan2(y_diff, x_diff)) - 90
+
+            if self.curtime > self.delay:
+                self.delay = self.curtime + random.randint(100, 200)
+                self.shoot()
+        else:
+            # Prevent detection noise from playing every frame
+            self.growl = False
+
 
 
 
@@ -190,6 +298,9 @@ class MyGame(arcade.Window):
         file_path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(file_path)
 
+        self.set_mouse_visible(False)
+
+
         #* отслеживаем текущее состояние нажатой клавиши
         self.left_pressed = False
         self.right_pressed = False
@@ -199,6 +310,16 @@ class MyGame(arcade.Window):
         self.cast_pressed = False
         self.attack_pressed = False
 
+        self.ammo_list = None
+        self.arrow_list = None
+        self.enemy_list = None
+        self.fireball_list = None
+
+        self.health = 100
+        self.ammo = 5
+        self.knife_delay = 0
+        self.knife_rate = 0
+
         #* Это списки которые отслеживают наши спрайты. Каждый спрайт должен войти в список.
         #TODO: self.coin_list = None
         self.wall_list = None
@@ -206,6 +327,7 @@ class MyGame(arcade.Window):
         #TODO: self.ladder_list = None
         self.player_list = None
         self.background = None
+        self.fireboll_list = None
 
         #* Отдельная переменная которая содержит спрайт игрока
         self.player_sprite = None
@@ -232,6 +354,8 @@ class MyGame(arcade.Window):
         #TODO: self.fps_message = None
 
         #* Загрузка свуковых эффектов
+        self.running_sound = arcade.load_sound("sprites/sounds/running_og1.wav")
+        self.fireboll_sound = arcade.load_sound("sprites/sounds/shoot3.wav")
         #TODO: self.collect_coin_sound = arcade.load_sound("указываем расположение файла")
         #TODO: self.jump_sound = arcade.load_sound("указываем расположение файла")
         #TODO: self.game_over = arcade.load_sound("указываем расположение файла")
@@ -251,7 +375,16 @@ class MyGame(arcade.Window):
         #* Создаём спрайт листы
         self.player_list = arcade.SpriteList()
         self.player_sprite = arcade.SpriteList()
+
+        self.ammo_list = arcade.SpriteList()
+        self.arrow_list = arcade.SpriteList()
+        self.enemy_list = arcade.SpriteList()
+        self.fireball_list = arcade.SpriteList()
         #TODO: self.coin_list = arcade.SpriteList()
+
+        self.demon_die_1 = arcade.load_texture("sprites/enemies/goblin/goblin_death_0.png")
+        self.demon_die_2 = arcade.load_texture("sprites/enemies/goblin/goblin_death_1.png")
+        self.demon_slash = arcade.load_texture("images/demon_slash.png")
 
         #* Ссылаемся что список игрока равен классу что мы уже описали
         self.player_sprite = PlayerCharacter()
@@ -307,10 +440,12 @@ class MyGame(arcade.Window):
         """
         arcade.start_render()
         self.player_list.draw()
+        self.fireboll_list.draw()
 
         #* Рисуем наши спрайты.
         self.wall_list.draw()
         self.background.draw()
+        
         #TODO: self.background_list.draw()
         #TODO: self.ladder_list.draw()
         #TODO: self.coin_list.draw()
@@ -318,6 +453,31 @@ class MyGame(arcade.Window):
         #* Отрисовка очков на экране, прокрутка по области просмотра
         score_text = f"Score: {self.score}"
         arcade.draw_text(score_text, 10 + self.view_left, 10 + view_bottom, arcade.scccolor.BLACK, 18)
+
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        fireboll = arcade.Sprite("sprites/effects/anim_fireboll/fireboll_0.png", SPRITE_PIXEL_SIZE)
+
+        start_x = self.player_sprite.center_x
+        start_y = self.player_sprite.center_y
+        fireboll.center_x = start_x
+        fireboll.center_y = start_y
+
+        dest_x = x
+        dest_y = y
+
+        x_diff = dest_x - start_x
+        y_diff = dest_y - start_y
+        angle = math.atan2(y_diff, x_diff)
+
+        fireboll.angle = math.degrees(angle)
+        print(f"fireboll angle: {fireboll.angle:.2f}")
+
+        fireboll.change_x = math.cos(angle) * FIREBOLL_SPEED
+        fireboll.change_y = math.sin(angle) * FIREBOLL_SPEED
+
+        self.fireboll_list.append(fireboll)
+
 
 
     def process_keychange(self):
@@ -350,6 +510,12 @@ class MyGame(arcade.Window):
         else:
             self.player_sprite.change_x = 0
 
+        if self.attack_pressed and self.right_pressed == True:
+            self.player_sprite.attack_texture_pair[0]
+        elif self.attack_pressed and self.left_pressed == True:
+            self.player_sprite.attack_texture_pair[1]
+
+
 
     def on_key_press(self, key, modifiers):
         #* Вызывается когда мы клавиша нажата.
@@ -361,7 +527,9 @@ class MyGame(arcade.Window):
             self.left_pressed = True
         elif key == arcade.key.RIGHT or key == arcade.key.D:
             self.right_pressed = True
-        
+        elif key == arcade.key.C:
+            self.attack_pressed = True
+
         self.process_keychange()
 
 
@@ -377,17 +545,34 @@ class MyGame(arcade.Window):
             self.left_pressed = False
         elif key == arcade.key.RIGHT or key == arcade.key.D:
             self.right_pressed = False
+        elif key == arcade.key.C:
+            self.attack_pressed = False
         
         self.process_keychange()
 
 
     def on_update(self, delta_time):
-        self.player_list.update_animation(1000)
+        self.player_list.update_animation()
         self.wall_list.update()
-        #* Процесс обновления спрайтов и игровой логики.
 
         #* Движение игрока с физическим движком
         self.physics_engine.update()
+
+        self.fireboll_list.update()
+
+        # for fireboll in self.fireboll_list:
+        #     hit_list = arcade.check_for_collision_with_list(fireboll, self.coin_list)
+
+        #     if len(hit_list) > 0:
+        #         fireboll.remove_from_sprite_lists()
+
+        #     for coin in hit_list:
+        #         coin.remove_from_sprite_lists()
+        #         self.score += 1
+
+        #     if fireboll.bottom > self.width or fireboll.top < 0 or fireboll.right < 0 or fireboll.left > self.width:
+        #         fireboll.remove_from_sprite_lists()
+        
 
         #* Обновление анимации
         if self.physics_engine.can_jump():
@@ -403,6 +588,7 @@ class MyGame(arcade.Window):
             self.player_sprite.is_on_ladder = False
             self.process_keychange()
 
+        
 
         #TODO: self.coin_list.update_animation(delta_time)
         #TODO: self.background_list.update_animation(delta_time)
